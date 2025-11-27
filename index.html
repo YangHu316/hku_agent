@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HKU AI对话助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 人设选择界面 */
+        .persona-selection {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 40px;
+        }
+
+        .persona-selection.hidden {
+            display: none;
+        }
+
+        .persona-title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .persona-title h1 {
+            font-size: 32px;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .persona-title p {
+            color: #6b7280;
+            font-size: 16px;
+        }
+
+        .persona-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            flex: 1;
+        }
+
+        .persona-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 16px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            border: 3px solid transparent;
+        }
+
+        .persona-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-color: #667eea;
+        }
+
+        .persona-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+
+        .persona-name {
+            font-size: 22px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+
+        .persona-description {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        /* 聊天界面 */
+        .chat-container {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-container.active {
+            display: flex;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .persona-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .change-persona-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .change-persona-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+            background: #f9fafb;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 12px;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .message.user .avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .message.bot .avatar {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 18px;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            color: #1f2937;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 18px;
+            width: fit-content;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .typing-indicator.active {
+            display: block;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+                /* ==================== 新增样式开始 ==================== */
+        .typing-text {
+            font-size: 14px;
+            color: #6b7280;
+            min-width: 200px; /* 给个最小宽度防止文字跳变 */
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* 让文字有个淡入淡出的动画效果 */
+        .fade-text {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0.5; transform: translateY(2px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* ==================== 新增样式结束 ==================== */
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #9ca3af;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .input-area {
+            padding: 20px 30px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .input-wrapper {
+            flex: 1;
+        }
+
+        #userInput {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 24px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+            resize: none;
+            max-height: 120px;
+            font-family: inherit;
+        }
+
+        #userInput:focus {
+            border-color: #667eea;
+        }
+
+        #sendBtn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        #sendBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        #sendBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 人设选择界面 -->
+        <div class="persona-selection" id="personaSelection">
+            <div class="persona-title">
+                <h1>🎓 HKU AI对话助手</h1>
+                <p>选择一个最适合你的对话伙伴</p>
+            </div>
+            <div class="persona-grid" id="personaGrid">
+                <!-- 动态加载人设卡片 -->
+            </div>
+        </div>
+
+        <!-- 聊天界面 -->
+        <div class="chat-container" id="chatContainer">
+            <div class="header">
+                <div class="header-left">
+                    <h1>🎓 HKU AI助手</h1>
+                    <div class="persona-indicator" id="personaIndicator">
+                        <span id="currentPersonaIcon"></span>
+                        <span id="currentPersonaName"></span>
+                    </div>
+                </div>
+                <button class="change-persona-btn" onclick="changePersona()">切换人设</button>
+            </div>
+
+            <div class="chat-area" id="chatArea">
+                <!-- 消息区域 -->
+            </div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="userInput" 
+                        placeholder="输入你的问题..." 
+                        rows="1"
+                        onkeydown="handleKeyPress(event)"></textarea>
+                </div>
+                <button id="sendBtn" onclick="sendMessage()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let currentPersona = null;
+        let isProcessing = false;
+        let loadingInterval = null; // <--- 【新增】用于存储轮播定时器
+
+        // 页面加载时获取人设列表
+        window.addEventListener('load', async () => {
+            await loadPersonas();
+        });
+
+        // 加载人设列表
+        async function loadPersonas() {
+            try {
+                const response = await fetch(`${API_URL}/personas`);
+                const data = await response.json();
+                
+                const grid = document.getElementById('personaGrid');
+                grid.innerHTML = '';
+                
+                data.personas.forEach(persona => {
+                    const card = document.createElement('div');
+                    card.className = 'persona-card';
+                    card.onclick = () => selectPersona(persona.id);
+                    
+                    card.innerHTML = `
+                        <div class="persona-icon">${persona.icon}</div>
+                        <div class="persona-name">${persona.name}</div>
+                        <div class="persona-description">${persona.description}</div>
+                    `;
+                    
+                    grid.appendChild(card);
+                });
+            } catch (error) {
+                console.error('加载人设失败:', error);
+            }
+        }
+
+        // 选择人设
+        async function selectPersona(personaId) {
+            try {
+                const response = await fetch(`${API_URL}/set-persona`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',  // 重要：携带cookie
+                    body: JSON.stringify({ persona: personaId })
+                });
+
+                if (response.ok) {
+                    currentPersona = personaId;
+                    showChatInterface();
+                }
+            } catch (error) {
+                console.error('设置人设失败:', error);
+            }
+        }
+
+        // 显示聊天界面
+        function showChatInterface() {
+            document.getElementById('personaSelection').classList.add('hidden');
+            document.getElementById('chatContainer').classList.add('active');
+            
+            // 更新人设指示器
+            updatePersonaIndicator();
+            
+            // 添加欢迎消息
+            addWelcomeMessage();
+        }
+
+        // 更新人设指示器
+        async function updatePersonaIndicator() {
+            const response = await fetch(`${API_URL}/personas`);
+            const data = await response.json();
+            const persona = data.personas.find(p => p.id === currentPersona);
+            
+            if (persona) {
+                document.getElementById('currentPersonaIcon').textContent = persona.icon;
+                document.getElementById('currentPersonaName').textContent = persona.name;
+            }
+        }
+
+        // 添加欢迎消息
+        function addWelcomeMessage() {
+            const messages = {
+                'student': '嗨！我是你的HKU学长/学姐，很高兴认识你！有什么关于港大的问题尽管问我，我会用最真实的经历帮你解答😊',
+                'expert': '你好！我是HKU全能导师，对港大的方方面面都很了解。无论是学习、生活还是未来发展，我都能为你提供专业建议！',
+                'researcher': '您好！我是HKU学术研究者。我可以为您提供关于港大学术体系、科研实力、学科发展的深度分析。',
+                'advisor': '您好！我是HKU招生顾问。很高兴能帮助您了解申请流程、录取要求和准备策略。让我们一起规划您的HKU之路！'
+            };
+            
+            const message = messages[currentPersona] || '你好！我是HKU AI助手，很高兴为你服务！';
+            addMessage(message, false);
+        }
+
+        // 切换人设
+        async function changePersona() {
+            // 重置对话
+            await fetch(`${API_URL}/reset`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            
+            // 清空聊天区域
+            document.getElementById('chatArea').innerHTML = '';
+            
+            // 返回人设选择界面
+            document.getElementById('chatContainer').classList.remove('active');
+            document.getElementById('personaSelection').classList.remove('hidden');
+        }
+
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const message = input.value.trim();
+
+            if (!message || isProcessing) return;
+
+            addMessage(message, true);
+            input.value = '';
+            input.style.height = 'auto';
+
+            isProcessing = true;
+            sendBtn.disabled = true;
+            input.disabled = true;
+
+            showTypingIndicator();
+
+            try {
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',  // 重要：携带cookie
+                    body: JSON.stringify({ query: message })
+                });
+
+                if (!response.ok) {
+                    throw new Error('API请求失败');
+                }
+
+                const data = await response.json();
+                
+                hideTypingIndicator();
+                addMessage(data.answer, false, data.sources || []);
+
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage(`⚠️ 连接失败: ${error.message}`, false);
+            } finally {
+                isProcessing = false;
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        // 添加消息
+        function addMessage(text, isUser, sources = []) {
+            const chatArea = document.getElementById('chatArea');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            
+            let sourcesHTML = '';
+            if (sources.length > 0) {
+                sourcesHTML = '<div style="margin-top:10px; padding-top:10px; border-top:1px solid #e5e7eb; font-size:12px; color:#6b7280;">📚 信息来源: ';
+                sources.forEach(source => {
+                    sourcesHTML += `<span style="background:#f3f4f6; padding:2px 8px; border-radius:8px; margin-right:6px;">${source}</span>`;
+                });
+                sourcesHTML += '</div>';
+            }
+
+            messageDiv.innerHTML = `
+                <div class="avatar">${isUser ? '👤' : document.getElementById('currentPersonaIcon').textContent}</div>
+                <div class="message-content">
+                    ${text.replace(/\n/g, '<br>')}
+                    ${sourcesHTML}
+                </div>
+            `;
+
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // 显示/隐藏输入指示器
+                // 显示动态输入指示器 (心理按摩版)
+        function showTypingIndicator() {
+            const chatArea = document.getElementById('chatArea');
+            const indicator = document.createElement('div');
+            indicator.className = 'message bot';
+            indicator.id = 'typingIndicator';
+            
+            // 定义轮播的提示语 (可以根据人设调整，这里用通用的)
+            const tips = [
+                "🤔 正在分析你的问题...",
+                "✍️ 正在组织暖心的建议...",
+                "🔍 正在核对事实来源...",
+                "💡 正在为你生成最佳答案..."
+            ];
+
+            // 初始显示第一句
+            indicator.innerHTML = `
+                <div class="avatar">${document.getElementById('currentPersonaIcon').textContent}</div>
+                <div class="typing-indicator active">
+                    <div class="typing-text">
+                        <span class="typing-dots" style="margin-right:8px">
+                            <span></span><span></span><span></span>
+                        </span>
+                        <span id="loadingText" class="fade-text">${tips[0]}</span>
+                    </div>
+                </div>
+            `;
+            
+            chatArea.appendChild(indicator);
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            // 启动定时器，每 2.5 秒换一句话
+            let index = 1;
+            loadingInterval = setInterval(() => {
+                const textEl = document.getElementById('loadingText');
+                if (textEl) {
+                    // 重新触发动画
+                    textEl.classList.remove('fade-text');
+                    void textEl.offsetWidth; // 触发重绘
+                    textEl.classList.add('fade-text');
+                    
+                    // 更新文字
+                    textEl.textContent = tips[index % tips.length];
+                    index++;
+                }
+            }, 2500);
+        }
+
+
+        function hideTypingIndicator() {
+            // 清除定时器，防止内存泄漏
+            if (loadingInterval) {
+                clearInterval(loadingInterval);
+                loadingInterval = null;
+            }
+            
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) indicator.remove();
+        }
+
+
+        // 处理回车键
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // 自动调整输入框高度
+        const userInput = document.getElementById('userInput');
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+    </script>
+</body>
+</html>

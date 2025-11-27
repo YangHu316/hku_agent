@@ -1,0 +1,19 @@
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 虚拟环境
+venv/
+env/
+
+# VSCode / PyCharm 等编辑器配置
+.vscode/
+.idea/
+
+# 操作系统的垃圾文件
+.DS_Store
+Thumbs.db
+
+# 本地私密配置（如果你以后用）
+.env
+config_local.py
